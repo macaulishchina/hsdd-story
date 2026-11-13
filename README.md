@@ -2,6 +2,20 @@
 
 HSDD Story 把需求、依赖、并行实施、验证和交付组织成一张方向图。人从项目总览进入需求子图，在节点里看实际情况、证据和下一步。AI 通过 MCP 更新同一份项目 XML，人可以在网页提交意见和明确结论。
 
+## Windows 一键部署
+
+安装 Python 3.12 或更新版本后，双击仓库根目录的 `deploy.cmd`。脚本安装独立的 Python 环境，注册并启动当前用户的 Windows 登录任务。默认使用 `.demo` 和端口 `8765`，首次创建演示数据，之后复用原数据。脚本会打印网页和 MCP 地址。首次安装需要能够下载 Python 依赖。
+
+正式使用时，可以在 PowerShell 中指定已有的业务目录和端口。
+
+```powershell
+.\deploy.cmd -Workspace 'D:\path\to\project' -Port 8766
+```
+
+更新源码后，用同样的参数再次运行即可更新该任务。每份仓库副本为当前用户管理一个任务。如果端口被手动启动的服务占用，请先停止旧进程，或选择其他端口。同一个工作区由一个服务管理。
+
+双击 `uninstall.cmd` 可停止并移除这个计划任务，同时清理 `.hsdd-service` 中的部署环境。演示和业务工作区的项目记录、附件均保留。MCP 客户端的连接独立配置，首次接入方法见下文。
+
 ## 运行演示
 
 需要 Python 3.12 或更新版本。在仓库目录执行：
@@ -24,13 +38,11 @@ python -m hsdd_story serve --workspace 'D:\path\to\project' --port 8765
 
 MCP 客户端使用 **Streamable HTTP** 地址 `http://127.0.0.1:8765/mcp`。启动服务时选择的目录是工具绑定的工作区。使用另一个工作区时，可以换一个端口并在客户端使用独立连接名。
 
-Codex 可以通过命令注册该端点：
+在支持 Streamable HTTP 的 Agent 客户端中添加 MCP 连接，URL 填部署时打印的 `/mcp` 地址。连接后即可查询工作流和读写方向图。首次接入可以让 Agent「通过 HSDD Story 读一下项目总览，告诉我当前进展和需要我决定的事项」。
 
-```powershell
-codex mcp add hsdd-story --url http://127.0.0.1:8765/mcp
-```
+Agent 调用 `story_guide({})` 获取主题目录，或传 `{"topic":"start"}` 查看接手步骤。更新、结构维护、附件、人工验收和版本冲突也有各自的主题。团队如果希望 Agent 在普通开发任务中主动同步，可以在业务项目规则里约定触发时机，例如「开发前读取方向图，有实质进展时按 `story_guide` 写回」。
 
-将 [配套 Skill](skills/hsdd-story/SKILL.md) 所在目录放进 Agent 的 Skill 搜索路径，再在新会话中调用。可以让 AI 「在这个工作区建立方向图，整理当前需求，并标出需要我决定的事项」。首次创建会通过 `story_apply` 保存到业务项目的 `.hsdd/story.xml`。
+可以让 Agent「在这个工作区建立方向图，整理当前需求，并标出需要我决定的事项」。首次创建通过 `story_apply` 保存到业务项目的 `.hsdd/story.xml`。
 
 AI 用 `story_schema` 了解固定节点格式，用 `story_read` 获取概览、子图、节点或连续变更，用 `story_apply` 一次提交相关修改。保存成功后网页会更新。若 AI 和人同时修改，页面会提示冲突并保留草稿，供核对后再提交。
 
@@ -64,4 +76,4 @@ python -m unittest discover -s tests -v
 | [MCP 接口契约](docs/mcp-contract.md) | 接口参数、批量操作与错误返回 |
 | [批量导出示例](examples/README.md) | 从一张有并行、失败和人工输入的图开始阅读 |
 
-服务在本机环回地址运行，适用于本地单用户协作。图记录开发事实和方向，实际编码、检查和交付由 Agent 的原有工具完成。Skill 的维护规则在被加载后生效。
+服务在本机环回地址运行，适用于本地单用户协作。图记录开发事实和方向，实际编码、检查和交付由 Agent 的原有工具完成。工作流通过 `story_guide` 按需查询。

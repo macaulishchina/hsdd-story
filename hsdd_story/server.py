@@ -25,6 +25,7 @@ from .contract import (
     ACTORS, CATALOG, EVIDENCE, HANDLING, INPUT_KINDS, RELATIONS, RESULT, VALIDITY, WORK,
     StoryError, check, fields, number, reference_list, schema,
 )
+from .guide import TOPICS, guide
 from .store import SEARCH_FILTERS, Store
 
 
@@ -111,6 +112,10 @@ def operation_schema(name):
 
 def tool_definitions():
     return [
+        Tool(name="story_guide", title="查询方向图工作流",
+             description="不传参数时列出主题。按 topic 查询接手、更新、结构维护、附件、人工验收或冲突处理。",
+             inputSchema=object_schema({"topic": choices(TOPICS)}),
+             annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False)),
         Tool(name="story_schema", title="查看节点契约",
              description="获取节点字段和操作契约。传 types 只取指定节点契约，传 operations 只取指定操作，可同时传。",
              inputSchema=object_schema({
@@ -120,7 +125,8 @@ def tool_definitions():
              annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False)),
         Tool(name="story_read", title="读取开发方向图",
              description="用 nodeRef 直达节点，用 search 按关键词或状态找节点，或读取概览、需求、节点和变化。"
-                         "传 nodeRef 时只传这一项。保存前使用返回的 revision 与 readToken。",
+                         "传 nodeRef 时只传这一项。保存前使用返回的 revision 与 readToken。"
+                         "接手工作时可查 story_guide 的 start。",
              inputSchema={
                  **object_schema({"nodeRef": STRING, "projectId": STRING,
                                   "view": {"enum": ["overview", "requirement", "nodes", "changes", "search"]},
@@ -143,7 +149,8 @@ def tool_definitions():
              annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False)),
         Tool(name="story_apply", title="保存方向图变更",
              description="对绑定工作区的 XML 原子应用一组结构化操作。旧快照、断链、环或缺失依据会返回错误。"
-                         "节点补丁的 set 支持公共字段和 body.<固定字段>，合并/拆分需同批重连并迁移人的记录。",
+                         "节点补丁的 set 支持公共字段和 body.<固定字段>，合并/拆分需同批重连并迁移人的记录。"
+                         "更新、验收与冲突处理可查 story_guide。",
              inputSchema=object_schema({
                  "projectId": STRING, "baseRevision": INTEGER, "readToken": STRING, "reason": STRING,
                  "operations": {"type": "array", "maxItems": 1000, "items": {"oneOf": [
@@ -213,11 +220,13 @@ def read_attachment(store, args):
 
 def mcp_server(store):
     server = Server("hsdd-story", VERSION, instructions=(
+        "用 story_guide 按主题查询本服务的工作流程，用 story_schema 查询字段与操作契约。"
         "用户粘贴 HSDD Story 节点引用时，先用 story_read 的 nodeRef 参数读取原节点。"
         "读取项目概览与相关节点，核对真实工作和人的输入，再提交局部修改。"
         "保持验证事实与人工结论的来源。"
     ))
-    handlers = {"story_schema": describe, "story_read": store.read, "story_apply": store.apply}
+    handlers = {"story_guide": guide, "story_schema": describe,
+                "story_read": store.read, "story_apply": store.apply}
 
     @server.list_tools()
     async def list_tools():

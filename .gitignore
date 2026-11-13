@@ -6,3 +6,4 @@ build/
 dist/
 .demo/
 .hsdd/
+/.hsdd-service/

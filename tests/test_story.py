@@ -363,8 +363,27 @@ class HttpAcceptance(unittest.IsolatedAsyncioTestCase):
                         ClientSession(receive, send) as session):
                 initial = await session.initialize()
                 self.assertEqual(initial.serverInfo.name, "hsdd-story")
-                self.assertEqual({t.name for t in (await session.list_tools()).tools},
-                                 {"story_schema", "story_read", "story_read_attachment", "story_apply"})
+                self.assertIn("story_guide", initial.instructions)
+                tools = {t.name: t for t in (await session.list_tools()).tools}
+                self.assertEqual(set(tools),
+                                 {"story_guide", "story_schema", "story_read", "story_read_attachment", "story_apply"})
+                self.assertTrue(tools["story_guide"].annotations.readOnlyHint)
+                before_guide = store.path.read_bytes()
+                catalog = await session.call_tool("story_guide", {})
+                self.assertFalse(catalog.isError)
+                topics = {item["topic"] for item in catalog.structuredContent["topics"]}
+                self.assertEqual(topics, {"start", "update", "structure", "attachments", "acceptance", "conflict"})
+                for topic in topics:
+                    with self.subTest(topic=topic):
+                        guide = await session.call_tool("story_guide", {"topic": topic})
+                        self.assertFalse(guide.isError)
+                        self.assertEqual(guide.structuredContent["topic"], topic)
+                        self.assertTrue(guide.structuredContent["steps"])
+                        self.assertNotIn("topics", guide.structuredContent)
+                for args in ({"topic": "unknown"}, {"topic": []}, {"unknown": "start"}):
+                    invalid = await session.call_tool("story_guide", args)
+                    self.assertTrue(invalid.isError)
+                self.assertEqual(store.path.read_bytes(), before_guide)
                 rules = await session.call_tool("story_schema", {"types": ["acceptance"]})
                 self.assertFalse(rules.isError)
                 self.assertEqual(list(rules.structuredContent["nodeTypes"]), ["acceptance"])
