@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 设计用模拟数据。以下代码、操作、测试和人工输入均为虚构案例，不代表本仓库已经实现或执行。 -->
+<story schemaVersion="1" id="P01" revision="4">
+  <project>
+    <title>记录管理工具（模拟项目）</title>
+    <goal>让用户可靠地导出当前筛选结果，并清楚知道导出的范围和限制。</goal>
+    <summary>模拟快照：需求和方案已明确，导出代码已完成一次编码修复；旧联调与自动测试需要复核，尚未进入人工验收或交付。</summary>
+  </project>
+
+  <requirements>
+    <requirement id="R01">
+      <title>批量导出筛选结果</title>
+      <goal>用户可将当前筛选范围内、最多一万条记录导出为 CSV。</goal>
+      <scope>本期覆盖筛选一致性、中文与空结果、容量提示；异步导出和超过一万条的导出留待后续。</scope>
+      <summary>方案已明确；子需求 R02 的代码修复尚待复测。人可以先补充验收意见，接受结论应基于后续实际体验。</summary>
+      <completion>
+        <gate ref="DL01"/>
+      </completion>
+      <nodes>
+        <node id="AN01" type="analysis" revision="1" work="finished" result="satisfied" validity="current">
+          <title>明确导出目标和边界</title>
+          <summary>已整理本期范围和可检查的完成条件；这仅代表分析完成。</summary>
+          <body>
+            <problem>用户需要保留当前筛选结果，现有页面只有逐页查看能力。</problem>
+            <scope>导出已保存记录；遵循当前筛选条件；CSV；最多一万条；不包含未保存编辑。</scope>
+            <criteria>导出内容与筛选结果一致；中文和空结果正确；超出容量时给出明确提示；由用户完成业务验收。</criteria>
+          </body>
+          <evidenceRef ref="EV-AN01"/>
+        </node>
+
+        <node id="IN01" type="investigation" revision="1" work="finished" result="satisfied" validity="current">
+          <title>核对现有筛选和下载能力</title>
+          <summary>已确认可以复用筛选参数与下载入口；没有将调查结论当作新增功能已实现。</summary>
+          <body>
+            <questions>筛选条件能否在导出时复用？下载文件由哪一层生成？是否存在可复用的容量限制？</questions>
+            <findings>模拟代码调查发现筛选参数有统一转换入口，浏览器下载能力可复用；容量限制需要本次补充。</findings>
+            <unknowns>没有阻碍方案选择的剩余未知项；真实运行效果仍由后续验证节点检查。</unknowns>
+          </body>
+          <basis ref="AN01" revision="1"/>
+          <evidenceRef ref="EV-IN01"/>
+        </node>
+
+        <node id="DP01" type="dependency" revision="1" work="finished" result="satisfied" validity="current">
+          <title>复用现有筛选接口</title>
+          <summary>既有筛选契约已核对，本次只使用它，不修改接口定义。</summary>
+          <body>
+            <target>现有记录查询接口及筛选参数转换函数。</target>
+            <capability>在导出请求中使用与列表页面相同的筛选条件，并返回符合条件的已保存记录。</capability>
+            <verification>模拟静态核对显示参数和记录字段能够满足本期需求；未声称该核对替代端到端测试。</verification>
+          </body>
+          <basis ref="IN01" revision="1"/>
+          <evidenceRef ref="EV-DP01"/>
+        </node>
+
+        <node id="AS01" type="assumption" revision="1" work="finished" result="satisfied" validity="current">
+          <title>首期容量边界能够覆盖主要场景</title>
+          <summary>模拟业务样本中，常用导出量不超过一万条；该判断仅适用于本期范围。</summary>
+          <body>
+            <statement>首期一万条上限能够覆盖已经讨论的主要使用场景。</statement>
+            <verification>检查模拟业务样本的导出量分布，记录样本所覆盖的使用场景及其边界。</verification>
+            <impact>若后续使用情况超出边界，需要重新讨论 FU01；本节点不证明一万条的性能已经达标。</impact>
+          </body>
+          <evidenceRef ref="EV-AS01"/>
+        </node>
+
+        <node id="DC01" type="decision" revision="1" work="finished" result="satisfied" validity="current">
+          <title>采用同步 CSV 导出</title>
+          <summary>人的模拟决定选择了同步 CSV 和一万条上限；十万条需求留待后续。</summary>
+          <body>
+            <options>方案一：同步导出并限制容量。方案二：异步任务、后台生成文件和通知下载。</options>
+            <choice>本期采用方案一，超过一万条时提示缩小筛选范围。</choice>
+            <rationale>先满足明确的日常使用场景；异步方案涉及额外任务生命周期，暂不进入本期。</rationale>
+          </body>
+          <basis ref="AS01" revision="1"/>
+          <evidenceRef ref="EV-DC01"/>
+          <humanInputRef ref="H01"/>
+        </node>
+
+        <node id="DS01" type="design" revision="1" work="finished" result="satisfied" validity="current">
+          <title>确定导出接口和页面交互</title>
+          <summary>已约定前后端边界，后端、前端和测试数据可以并行准备。</summary>
+          <body>
+            <structure>后端负责筛选读取、容量判断和 CSV 生成；前端负责当前条件传递、下载操作和结果提示。</structure>
+            <contracts>导出请求沿用筛选参数；成功返回 CSV；超过容量返回可展示的错误；中文使用带 BOM 的 UTF-8。</contracts>
+            <constraints>不更改既有筛选接口；不导出未保存编辑；不新增异步任务设施。</constraints>
+          </body>
+          <basis ref="DC01" revision="1"/>
+          <evidenceRef ref="EV-DS01"/>
+        </node>
+
+        <node id="RV01" type="review" revision="1" work="finished" result="satisfied" validity="current">
+          <title>评审接口与验收覆盖</title>
+          <summary>模拟设计评审没有剩余阻断项；这不代表代码评审或业务验收已完成。</summary>
+          <body>
+            <target>DS01 的导出契约与 AN01 的完成条件。</target>
+            <findings>最初遗漏了空结果下载和中文编码检查；已补入设计约定和测试准备范围。</findings>
+            <disposition>本次设计评审发现已处理，可按该契约开始并行开发。</disposition>
+          </body>
+          <basis ref="DS01" revision="1"/>
+          <evidenceRef ref="EV-RV01"/>
+        </node>
+
+        <node id="MV01" type="verification" revision="1" work="blocked" result="unknown" validity="current">
+          <title>人工检查下载体验</title>
+          <summary>等待 R02 的有效回归结果；尚未进行模拟人工操作。</summary>
+          <body>
+            <checks>检查按钮状态、重复点击、成功提示、超限提示及下载文件的打开体验。</checks>
+            <method>manual</method>
+            <observations>尚未执行。</observations>
+          </body>
+          <next actor="human">R02 复测通过后，记录实际操作中的体验与问题。</next>
+        </node>
+
+        <node id="AC01" type="acceptance" revision="1" work="planned" result="unknown" validity="current">
+          <title>接受本期导出能力</title>
+          <summary>已有一条人的验收关注点，尚无接受或退回结论。</summary>
+          <body>
+            <criteria>满足 AN01 的完成条件；人工体验符合预期；未满足项得到明确处理。</criteria>
+            <coverage>尚未验收。</coverage>
+            <unresolved>等待自动回归与人工检查；H02 的中文内容关注点尚待整合和核对。</unresolved>
+          </body>
+          <next actor="human">体验候选交付结果，填写接受结论或需要修改的问题。</next>
+          <humanInputRef ref="H02"/>
+        </node>
+
+        <node id="DL01" type="delivery" revision="1" work="planned" result="unknown" validity="current">
+          <title>合并并交付导出能力</title>
+          <summary>本期最终完成节点；尚未发生模拟合并或交付。</summary>
+          <body>
+            <deliverables>导出实现、验证结果，以及明确说明一万条上限的交付说明。</deliverables>
+          </body>
+          <next actor="ai">验收接受后，在实际授权范围内完成交付并记录位置和结果。</next>
+        </node>
+
+        <node id="FU01" type="follow_up" revision="1" work="deferred" result="unknown" validity="current">
+          <title>大数据异步导出</title>
+          <summary>保留十万条场景的后续方向，不阻塞本期交付；原容量诉求记录 H03 仍可追溯。</summary>
+          <body>
+            <item>评估后台生成、进度反馈和过期下载链接，支持十万条及以上的导出。</item>
+            <reason>超出已确认的首期同步导出范围。</reason>
+            <revisit>出现持续超限使用需求，或用户明确启动大数据导出需求时重新分析。</revisit>
+          </body>
+          <humanInputRef ref="H03"/>
+        </node>
+      </nodes>
+    </requirement>
+
+    <requirement id="R02" parent="R01">
+      <title>CSV 导出能力实现与回归</title>
+      <goal>形成可交给人工检查的导出实现，并获得当前版本的自动回归结果。</goal>
+      <scope>后端、前端、自动测试准备、联调和端到端回归。</scope>
+      <summary>三条实现分支已经完成；后端修订为 2 后，旧联调与失败测试均待复核。下一步先重新联调，再运行回归。</summary>
+      <completion>
+        <gate ref="AT01"/>
+      </completion>
+      <nodes>
+        <node id="IM01" type="implementation" revision="2" work="finished" result="satisfied" validity="current">
+          <title>实现后端 CSV 导出</title>
+          <summary>模拟代码已补齐容量判断和 CSV 生成，并修正了第一次测试暴露的 BOM 缺失；修复效果尚待复测。</summary>
+          <body>
+            <scope>复用筛选读取记录；限制一万条；生成带 BOM 的 UTF-8 CSV。</scope>
+            <outputs>模拟导出处理函数及容量检查分支，当前内容修订为 2。</outputs>
+            <remaining>本节点的代码改动已结束；联调与运行验证由 IG01 和 AT01 继续记录。</remaining>
+          </body>
+          <basis ref="DS01" revision="1"/>
+          <evidenceRef ref="EV-IM01"/>
+        </node>
+
+        <node id="IM02" type="implementation" revision="1" work="finished" result="satisfied" validity="current">
+          <title>实现前端导出入口</title>
+          <summary>模拟页面代码已完成当前筛选传递和下载反馈，尚未获得人工体验结论。</summary>
+          <body>
+            <scope>增加导出操作、请求期间状态、下载触发与超限提示。</scope>
+            <outputs>模拟导出按钮和请求处理逻辑。</outputs>
+            <remaining>本节点无剩余代码事项；实际体验由 MV01 检查。</remaining>
+          </body>
+          <basis ref="DS01" revision="1"/>
+          <evidenceRef ref="EV-IM02"/>
+        </node>
+
+        <node id="VT01" type="verification" revision="1" work="finished" result="satisfied" validity="current">
+          <title>准备自动测试用例与数据</title>
+          <summary>模拟测试数据的准备检查已通过，只说明用例与数据就绪。</summary>
+          <body>
+            <checks>空结果、中文字段、不同筛选组合、一万条边界及超限数据；检查样本数量与预期值。</checks>
+            <method>automated</method>
+            <observations>模拟准备检查通过；没有将该结果当作导出功能已经通过端到端测试。</observations>
+          </body>
+          <basis ref="DS01" revision="1"/>
+          <evidenceRef ref="EV-VT01"/>
+        </node>
+
+        <node id="IG01" type="integration" revision="1" work="finished" result="satisfied" validity="needs_review">
+          <title>前后端联调</title>
+          <summary>旧版模拟联调成功；后端由修订 1 变为 2 后，该成功结论尚未复核。</summary>
+          <body>
+            <inputs>IM01 后端实现、IM02 前端实现、VT01 测试数据。</inputs>
+            <contracts>确认页面筛选参数、下载响应和超限错误按 DS01 约定贯通。</contracts>
+            <observations>旧版模拟联调曾确认请求与响应贯通；该结果针对 IM01 修订 1，不证明当前修订 2 已贯通。</observations>
+          </body>
+          <next actor="ai">针对 IM01 修订 2 重新联调，记录结果及适用修订。</next>
+          <basis ref="IM01" revision="1"/>
+          <basis ref="IM02" revision="1"/>
+          <basis ref="VT01" revision="1"/>
+          <evidenceRef ref="EV-IG01"/>
+        </node>
+
+        <node id="AT01" type="verification" revision="1" work="finished" result="unsatisfied" validity="needs_review">
+          <title>端到端导出回归</title>
+          <summary>旧版模拟回归失败于中文编码；后端已修改，但尚未复测。失败事实保留，当前效果未知。</summary>
+          <body>
+            <checks>筛选内容一致性、中文打开效果、空结果、一万条边界、超限提示。</checks>
+            <method>automated</method>
+            <observations>旧版模拟运行中四类检查通过，中文编码检查失败，原因指向 BOM 缺失；修复后尚未产生新的执行结果。</observations>
+          </body>
+          <next actor="ai">在 IG01 复核后重新执行回归；保存实际结果，再决定 R02 是否完成。</next>
+          <basis ref="IM01" revision="1"/>
+          <basis ref="IG01" revision="1"/>
+          <evidenceRef ref="EV-AT01"/>
+        </node>
+      </nodes>
+    </requirement>
+  </requirements>
+
+  <relations>
+    <edge id="E01" type="requires" from="AN01" to="IN01"/>
+    <edge id="E02" type="requires" from="IN01" to="DP01"/>
+    <edge id="E03" type="requires" from="IN01" to="AS01"/>
+    <edge id="E04" type="requires" from="DP01" to="DC01"/>
+    <edge id="E05" type="requires" from="AS01" to="DC01"/>
+    <edge id="E06" type="requires" from="DC01" to="DS01"/>
+    <edge id="E07" type="requires" from="DS01" to="RV01"/>
+    <edge id="E08" type="requires" from="RV01" to="IM01"/>
+    <edge id="E09" type="requires" from="RV01" to="IM02"/>
+    <edge id="E10" type="requires" from="RV01" to="VT01"/>
+    <edge id="E11" type="requires" from="DP01" to="IM01"/>
+    <edge id="E12" type="requires" from="AS01" to="VT01"/>
+    <edge id="E13" type="requires" from="IM01" to="IG01"/>
+    <edge id="E14" type="requires" from="IM02" to="IG01"/>
+    <edge id="E15" type="requires" from="VT01" to="IG01"/>
+    <edge id="E16" type="requires" from="IG01" to="AT01"/>
+    <edge id="E17" type="requires" from="R02" to="MV01"/>
+    <edge id="E18" type="requires" from="MV01" to="AC01"/>
+    <edge id="E19" type="requires" from="AC01" to="DL01"/>
+    <edge id="E20" type="references" from="AN01" to="AC01"/>
+    <edge id="E21" type="references" from="DC01" to="FU01"/>
+    <edge id="E22" type="follow_up" from="DL01" to="FU01"/>
+  </relations>
+
+  <evidence>
+    <item id="EV-AN01" kind="document" target="simulation:requirements/export-scope" subject="AN01" subjectRevision="1">模拟需求讨论摘要，记录首期范围和检查条件；不指向真实业务需求文件。</item>
+    <item id="EV-IN01" kind="observation" target="simulation:inspection/filter-and-download" subject="IN01" subjectRevision="1">模拟静态调查记录，说明筛选参数与下载入口的复用位置。</item>
+    <item id="EV-DP01" kind="code" target="simulation:code/filter-contract" subject="DP01" subjectRevision="1">模拟接口契约核对，覆盖参数、记录字段和已保存状态。</item>
+    <item id="EV-AS01" kind="observation" target="simulation:business/export-volume" subject="AS01" subjectRevision="1">模拟业务样本显示已讨论的日常导出量落在一万条以内；不构成性能测试结果。</item>
+    <item id="EV-DC01" kind="decision" target="simulation:human-input/H01" subject="DC01" subjectRevision="1">模拟人的原始决定见 H01；AI 只归纳该选择及其范围。</item>
+    <item id="EV-DS01" kind="document" target="simulation:design/export-contract" subject="DS01" subjectRevision="1">模拟设计约定：筛选参数复用、带 BOM 的 UTF-8、容量错误与页面反馈。</item>
+    <item id="EV-RV01" kind="observation" target="simulation:review/export-design" subject="RV01" subjectRevision="1">模拟设计评审结果：空结果与中文编码已补入覆盖，没有剩余设计阻断项。</item>
+    <item id="EV-IM01" kind="code" target="simulation:code/backend-export/revision-2" subject="IM01" subjectRevision="2">模拟代码核对：容量判断与 CSV 生成分支已存在，修订 2 增加 BOM；未运行真实代码。</item>
+    <item id="EV-IM02" kind="code" target="simulation:code/frontend-export/revision-1" subject="IM02" subjectRevision="1">模拟页面代码核对：筛选传递、请求状态、下载触发与超限提示已写入；未运行真实页面。</item>
+    <item id="EV-VT01" kind="test" target="simulation:test/fixture-check/run-1" subject="VT01" subjectRevision="1">模拟执行 fixture-check：样本数量和预期值检查通过；适用范围仅为测试数据，不包含导出功能。</item>
+    <item id="EV-IG01" kind="test" target="simulation:test/integration/run-1" subject="IG01" subjectRevision="1">模拟执行 integration-check：请求响应贯通，针对 IM01 修订 1、IM02 修订 1 与 VT01 修订 1；后端修改后尚未重跑。</item>
+    <item id="EV-AT01" kind="test" target="simulation:test/export-e2e/run-1" subject="AT01" subjectRevision="1">模拟执行 export-e2e：筛选、空结果、边界和超限通过，中文编码失败；针对 IM01 修订 1 及旧联调结果。没有真实命令执行记录。</item>
+  </evidence>
+
+  <humanInputs>
+    <input id="H01" target="DC01" kind="decision" source="human" recorder="ai" channel="chat" handling="incorporated">【模拟原话】首期先做同步 CSV，最多一万条。超过上限就提示缩小范围，异步导出以后再做。</input>
+    <input id="H02" target="AC01" kind="comment" source="human" recorder="human" channel="web" handling="pending">【模拟原话】验收时请重点检查中文文件打开后的内容，也要看空结果的提示。</input>
+    <input id="H03" target="F00" kind="comment" source="human" recorder="human" channel="web" handling="incorporated">【模拟原话】后面会有十万条的导出需求，先记下来，不影响这次交付。</input>
+  </humanInputs>
+
+  <archive>
+    <retired requirement="R01" reason="将容量诉求细化为异步导出方向，保留原始意见与替代关系。" atRevision="4">
+      <node id="F00" type="follow_up" revision="1" work="deferred" result="unknown" validity="current">
+        <title>支持十万条导出</title>
+        <summary>原始后续诉求，已由 FU01 表达更明确的技术方向。</summary>
+        <body>
+          <item>后续支持十万条记录导出。</item>
+          <reason>超出本期一万条容量范围。</reason>
+          <revisit>正式启动大容量导出需求时重新讨论。</revisit>
+        </body>
+        <humanInputRef ref="H03"/>
+      </node>
+      <replacement ref="FU01"/>
+    </retired>
+  </archive>
+
+  <changes>
+    <change revision="1" actor="ai" reason="建立模拟项目图，整理需求、设计和既有模拟实施结果。">
+      <affected ref="R01"/>
+      <affected ref="R02"/>
+    </change>
+    <change revision="2" actor="human" reason="加入模拟验收关注点和后续容量诉求。">
+      <affected ref="AC01"/>
+      <affected ref="F00"/>
+    </change>
+    <change revision="3" actor="ai" reason="模拟后端编码修复达到修订 2；旧联调和自动测试结论标为待复核。">
+      <affected ref="IM01"/>
+      <affected ref="IG01"/>
+      <affected ref="AT01"/>
+    </change>
+    <change revision="4" actor="ai" reason="将 F00 细化为 FU01，归档旧节点并保留 H03 的原文和引用。">
+      <affected ref="F00"/>
+      <affected ref="FU01"/>
+    </change>
+  </changes>
+</story>

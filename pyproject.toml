@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hsdd-story"
+version = "1.2.0"
+description = "Local project direction graph for human and AI collaboration"
+requires-python = ">=3.12"
+dependencies = ["mcp==1.26.0", "starlette==0.52.1", "uvicorn==0.41.0", "markdown-it-py==4.0.0"]
+
+[project.scripts]
+hsdd-story = "hsdd_story.__main__:main"
+
+[tool.setuptools]
+packages = ["hsdd_story", "hsdd_story.examples"]
+package-dir = {"hsdd_story.examples" = "examples"}
+
+[tool.setuptools.package-data]
+hsdd_story = ["web/*"]
+"hsdd_story.examples" = ["export.story.xml"]
